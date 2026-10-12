@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisão de propostas de notícia — GenLocalNews</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --void:     #f5f1eb;
+  --deep:     #0f0f0f;
+  --surface:  #faf8f4;
+  --raised:   #ede8df;
+  --border:   #c8bfb0;
+  --border2:  #a99f92;
+  --gold:     #c0392b;
+  --gold2:    #d95042;
+  --teal:     #2c6e49;
+  --crimson:  #c0392b;
+  --green:    #2c6e49;
+  --amber:    #e67e22;
+  --text:     #0f0f0f;
+  --text2:    #443d36;
+  --text3:    #7a6f63;
+  --white:    #f5f1eb;
+  --mono:     'JetBrains Mono', monospace;
+  --serif:    'Crimson Pro', Georgia, serif;
+  --display:  'Bebas Neue', Impact, sans-serif;
+  --r:        2px;
+  --shadow:   0 4px 20px rgba(0,0,0,0.4);
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--text);font-family:var(--serif);font-size:15px;line-height:1.7;min-height:100vh;
+  background-image:none}
+
+/* Top bar */
+.mastbar{
+  background:var(--deep);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  position:relative;
+}
+.mastbar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--crimson),var(--gold),var(--teal))}
+.mastbar-inner{
+  max-width:1200px;margin:0 auto;padding:1rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+}
+.mastbar-brand{display:flex;align-items:center;gap:.8rem}
+.mastbar-brand h1{font-family:var(--display);font-size:1.6rem;color:var(--white);letter-spacing:.06em}
+.mastbar-tag{font-family:var(--mono);font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);border:1px solid rgba(201,168,76,.35);padding:.2rem .6rem;border-radius:1px}
+.mastbar-run{font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:.08em}
+.mastbar-back{font-family:var(--mono);font-size:.62rem;color:var(--text3);text-decoration:none;
+  display:flex;align-items:center;gap:.4rem;transition:color .15s}
+.mastbar-back:hover{color:var(--text)}
+
+/* Loading / empty / error states */
+.state-box{text-align:center;padding:5rem 2rem;max-width:480px;margin:0 auto}
+.state-icon{font-size:2.5rem;display:block;opacity:.3;margin-bottom:1.2rem}
+.state-title{font-family:var(--display);font-size:1.4rem;color:var(--white);letter-spacing:.04em;margin-bottom:.5rem}
+.state-msg{font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:.06em;line-height:1.8}
+.state-spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--gold);
+  border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1.2rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Progress bar */
+.progress-row{display:flex;align-items:center;gap:.8rem}
+.progress-track{width:160px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--teal));transition:width .3s;border-radius:2px}
+.progress-txt{font-family:var(--mono);font-size:.6rem;color:var(--text3);white-space:nowrap;letter-spacing:.06em}
+
+/* Filter strip */
+.filter-strip{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  max-width:1200px;margin:0 auto;padding:.7rem 2rem;
+  display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+}
+.filter-btn{
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:.3rem .75rem;border-radius:1px;cursor:pointer;
+  background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s;
+}
+.filter-btn:hover{background:var(--raised);color:var(--text2)}
+.filter-btn.active{background:var(--raised);color:var(--gold);border-color:rgba(201,168,76,.4)}
+.filter-count{font-family:var(--mono);font-size:.58rem;color:var(--text3);margin-left:auto;letter-spacing:.08em}
+
+/* Card list */
+.card-list{max-width:1200px;margin:0 auto;padding:1.5rem 2rem;display:flex;flex-direction:column;gap:1rem}
+
+/* Review card */
+.review-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;transition:border-color .15s;
+}
+.review-card:hover{border-color:var(--border2)}
+.review-card.approved{border-left:2px solid var(--green)}
+.review-card.rejected{border-left:2px solid var(--crimson);opacity:.65}
+.review-card.edited{border-left:2px solid var(--gold)}
+.review-card.pending{border-left:2px solid var(--border2)}
+
+.card-header{
+  padding:.65rem 1rem;display:flex;align-items:center;gap:.6rem;
+  background:var(--raised);border-bottom:1px solid var(--border);flex-wrap:wrap;
+}
+.card-num{font-family:var(--mono);font-size:.58rem;color:var(--text3);min-width:22px}
+.card-status-badge{
+  font-family:var(--mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:.16rem .5rem;border-radius:1px;font-weight:600;white-space:nowrap;
+}
+.badge-pending  {background:rgba(74,90,112,.25);color:var(--text3);border:1px solid var(--border)}
+.badge-approved {background:rgba(39,174,96,.15);color:#4ade80;border:1px solid rgba(39,174,96,.3)}
+.badge-edited   {background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+.badge-rejected {background:rgba(192,57,43,.15);color:#f87060;border:1px solid rgba(192,57,43,.3)}
+
+.card-title{font-family:var(--serif);font-size:.88rem;font-weight:600;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.card-iip{
+  font-family:var(--mono);font-size:.58rem;padding:.14rem .45rem;border-radius:20px;white-space:nowrap;
+}
+.iip-high{background:rgba(192,57,43,.15);color:#e07060;border:1px solid rgba(192,57,43,.3)}
+.iip-mid {background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+.iip-low {background:rgba(74,90,112,.2);color:var(--text3);border:1px solid var(--border)}
+
+.card-body{padding:.9rem 1rem}
+
+/* Criteria */
+.criteria-row{display:grid;grid-template-columns:repeat(7,1fr);gap:.22rem;margin-bottom:.8rem}
+.crit-cell{text-align:center;background:var(--raised);border:1px solid var(--border);
+  border-radius:1px;padding:.28rem .1rem}
+.crit-lbl{font-family:var(--mono);font-size:.45rem;text-transform:uppercase;
+  color:var(--text3);display:block;letter-spacing:.06em}
+.crit-val{font-family:var(--mono);font-size:.82rem;font-weight:500;display:block}
+.cv1{color:var(--text3)} .cv2{color:var(--text2)} .cv3{color:var(--gold)}
+.cv4{color:#e0845a} .cv5{color:var(--crimson);font-weight:700}
+
+/* Generated news display */
+.news-display{
+  background:var(--raised);border:1px solid var(--border);
+  border-left:2px solid var(--gold);border-radius:1px;padding:.9rem 1.1rem;
+  margin-bottom:.8rem;
+}
+.news-label{font-family:var(--mono);font-size:.52rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:.35rem}
+.news-heading{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin-bottom:.4rem}.news-heading .news-label{margin-bottom:0}.generation-badge{font-family:var(--mono);font-size:.52rem;letter-spacing:.04em;color:#23683e;background:#e5f3e9;border:1px solid #b9d4c2;border-radius:18px;padding:.2rem .5rem}.generation-badge.fallback{color:#8a5a12;background:#fff3d8;border-color:#e0c38b}
+.news-titulo{font-family:var(--display);font-size:1.1rem;color:var(--deep);
+  letter-spacing:.02em;margin-bottom:.4rem;line-height:1.2}
+.news-lead{font-size:.88rem;font-weight:600;margin-bottom:.35rem;line-height:1.5;color:var(--text)}
+.news-corpo{font-size:.83rem;color:var(--text2);font-style:italic;line-height:1.6}
+
+/* Edit form */
+.edit-form{background:var(--raised);border:1px solid var(--border2);
+  border-radius:1px;padding:1rem;margin-bottom:.8rem;display:none}
+.edit-form.open{display:block}
+.edit-field{margin-bottom:.8rem}
+.edit-field:last-child{margin-bottom:0}
+.edit-label{font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text3);display:block;margin-bottom:.35rem}
+.edit-input,.edit-textarea{
+  width:100%;background:var(--surface);border:1px solid var(--border2);
+  border-radius:1px;color:var(--text);font-family:var(--serif);font-size:.9rem;
+  padding:.5rem .7rem;transition:border-color .15s;line-height:1.5;
+}
+.edit-input:focus,.edit-textarea:focus{outline:none;border-color:var(--gold);
+  box-shadow:0 0 0 2px rgba(201,168,76,.12)}
+.edit-textarea{resize:vertical;min-height:80px}
+.note-input{
+  width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);
+  color:var(--text3);font-family:var(--mono);font-size:.65rem;padding:.3rem .1rem;
+  transition:border-color .15s;letter-spacing:.04em;
+}
+.note-input:focus{outline:none;border-color:var(--gold);color:var(--text2)}
+.note-input::placeholder{color:var(--text3);opacity:.5}
+
+/* Action buttons */
+.action-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:.35rem;
+  font-family:var(--mono);font-size:.6rem;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;
+  padding:.42rem .85rem;border-radius:1px;cursor:pointer;
+  border:1px solid;transition:all .15s;
+}
+.btn-approve{background:rgba(39,174,96,.12);color:#4ade80;border-color:rgba(39,174,96,.3)}
+.btn-approve:hover,.btn-approve.active{background:rgba(39,174,96,.25);border-color:#4ade80}
+.btn-edit{background:rgba(201,168,76,.08);color:var(--gold);border-color:rgba(201,168,76,.25)}
+.btn-edit:hover,.btn-edit.active{background:rgba(201,168,76,.2);border-color:var(--gold)}
+.btn-reject{background:rgba(192,57,43,.1);color:#f87060;border-color:rgba(192,57,43,.25)}
+.btn-reject:hover,.btn-reject.active{background:rgba(192,57,43,.22);border-color:#f87060}
+.btn-undo{background:transparent;color:var(--text3);border-color:var(--border);font-size:.55rem}
+.btn-undo:hover{color:var(--text2);border-color:var(--border2)}
+.source-toggle{
+  margin-left:auto;font-family:var(--mono);font-size:.55rem;color:var(--text3);
+  cursor:pointer;letter-spacing:.08em;text-transform:uppercase;background:none;
+  border:none;text-decoration:underline;
+}
+.source-toggle:hover{color:var(--text2)}
+.source-text{
+  display:none;margin-top:.7rem;padding:.7rem .9rem;
+  background:var(--raised);border-left:2px solid var(--border2);
+  border-radius:1px;font-size:.8rem;color:var(--text2);
+  font-style:italic;line-height:1.6;
+}
+.source-text.open{display:block}
+
+/* Publish bar */
+.publish-bar{
+  position:sticky;bottom:0;z-index:50;
+  background:var(--deep);border-top:1px solid var(--border2);
+  padding:.9rem 2rem;
+}
+.publish-inner{
+  max-width:1200px;margin:0 auto;
+  display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;
+}
+.pstats{display:flex;gap:1.2rem}
+.pstat{text-align:center}
+.pstat-val{font-family:var(--display);font-size:1.3rem;display:block;letter-spacing:.04em}
+.pstat-label{font-family:var(--mono);font-size:.52rem;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--text3)}
+.pstat-val.green{color:#4ade80} .pstat-val.amber{color:var(--gold)}
+.pstat-val.red{color:#f87060} .pstat-val.grey{color:var(--text3)}
+
+.btn-export{
+  font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:.55rem 1.1rem;border-radius:1px;cursor:pointer;
+  background:transparent;color:var(--text2);border:1px solid var(--border2);
+  transition:all .15s;
+}
+.btn-export:hover{background:var(--raised);color:var(--text)}
+
+.btn-publish{
+  font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;
+  padding:.6rem 1.4rem;border-radius:1px;cursor:pointer;
+  background:var(--gold);color:var(--void);border:none;font-weight:600;
+  transition:all .15s;margin-left:auto;
+}
+.btn-publish:hover:not(:disabled){background:var(--gold2);transform:translateY(-1px);
+  box-shadow:0 6px 20px rgba(201,168,76,.3)}
+.btn-publish:disabled{opacity:.3;cursor:not-allowed}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:80px;right:24px;
+  background:var(--raised);color:var(--text);
+  font-family:var(--mono);font-size:.65rem;letter-spacing:.06em;
+  padding:.7rem 1.1rem;border-radius:1px;border:1px solid var(--border2);
+  opacity:0;transition:opacity .25s;pointer-events:none;z-index:999;
+  border-left:2px solid var(--gold);
+}
+.toast.show{opacity:1}
+
+/* Empty state */
+.empty-state{
+  text-align:center;padding:3rem 1rem;
+  font-family:var(--mono);font-size:.65rem;color:var(--text3);
+  letter-spacing:.06em;display:none;
+}
+
+
+.editorial-overview{display:grid;grid-template-columns:minmax(180px,.9fr) minmax(130px,.55fr) minmax(110px,.45fr);gap:.5rem;margin-bottom:.75rem}.overview-box{background:var(--raised);border:1px solid var(--border);padding:.55rem .65rem}.overview-label{font-family:var(--mono);font-size:.48rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)}.overview-value{font-family:var(--serif);font-size:.9rem;color:var(--text);font-weight:600;margin-top:.1rem}.overview-meter{height:6px;background:var(--border);margin-top:.35rem;border-radius:8px;overflow:hidden}.overview-fill{height:100%;background:var(--green);border-radius:8px}.criteria-title{font-family:var(--mono);font-size:.5rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin:.25rem 0 .4rem}.criteria-row{grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:.32rem}.crit-cell{display:flex;align-items:center;gap:.4rem;text-align:left;padding:.35rem .4rem;min-width:0}.crit-val{order:-1;width:25px;height:25px;border-radius:50%;display:grid;place-items:center;background:rgba(39,174,96,.13);flex:0 0 25px}.crit-lbl{font-size:.5rem;line-height:1.1;white-space:normal;overflow:visible;text-transform:none;letter-spacing:0}.crit-lbl small{display:block;font-size:.43rem;color:var(--text3);margin-top:.08rem}.technical-review{margin-top:.55rem}.technical-review summary{cursor:pointer;font-family:var(--mono);font-size:.52rem;color:var(--text3);letter-spacing:.06em}.technical-review div{font-family:var(--mono);font-size:.54rem;color:var(--text3);margin-top:.45rem;line-height:1.6}.card-title{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}.card-iip{font-size:.56rem}.source-toggle{margin-left:auto}@media(max-width:700px){.editorial-overview{grid-template-columns:1fr}.criteria-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+  .card-list{padding:1rem}
+  .publish-inner{flex-direction:column;align-items:flex-start}
+  .btn-publish{margin-left:0;width:100%;justify-content:center}
+  .criteria-row{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<header>
+  <div class="mastbar">
+    <div class="mastbar-inner">
+      <div class="mastbar-brand">
+        <a href="/" class="mastbar-back">← Fluxo</a> <a href="/logout" class="mastbar-back">Sair</a>
+        <h1>Revisão de propostas de notícia</h1>
+        <span class="mastbar-tag">Revisão humana</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
+        <span class="mastbar-run" id="runInfo">—</span>
+        <div class="progress-row" id="progressRow" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+          <span class="progress-txt" id="progTxt">0 / 0 revistos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-strip" id="filterStrip" style="display:none">
+    <button class="filter-btn active" data-f="all">Todos</button>
+    <button class="filter-btn" data-f="pending">Por rever</button>
+    <button class="filter-btn" data-f="approved">Aprovados</button>
+    <button class="filter-btn" data-f="edited">Editados</button>
+    <button class="filter-btn" data-f="rejected">Rejeitados</button>
+    <span class="filter-count" id="filterCount"></span>
+  </div>
+</header>
+
+<!-- Main content -->
+<div id="stateBox">
+  <div class="state-box" id="loadingState">
+    <div class="state-spinner"></div>
+    <div class="state-title">A carregar propostas de notícia…</div>
+    <div class="state-msg" id="loadingMsg">A ligar ao pipeline</div>
+  </div>
+</div>
+
+<div id="mainContent" style="display:none">
+  <div class="card-list" id="cardList"></div>
+  <div class="empty-state" id="emptyState">Nenhum item corresponde ao filtro selecionado.</div>
+</div>
+
+<!-- Publish bar -->
+<div class="publish-bar" id="publishBar" style="display:none">
+  <div class="publish-inner">
+    <div class="pstats">
+      <div class="pstat"><span class="pstat-val green" id="psApproved">0</span><span class="pstat-label">Aprovados</span></div>
+      <div class="pstat"><span class="pstat-val amber" id="psEdited">0</span><span class="pstat-label">Editados</span></div>
+      <div class="pstat"><span class="pstat-val red"  id="psPending">0</span><span class="pstat-label">Por rever</span></div>
+      <div class="pstat"><span class="pstat-val grey" id="psRejected">0</span><span class="pstat-label">Rejeitados</span></div>
+    </div>
+    <button class="btn-export" id="btnExport">⬇ Exportar JSON</button>
+    <select id="exportFormat" class="btn-export" style="width:auto;background:var(--surface)">
+      <option value="html">Página HTML</option>
+      <option value="iframe">Iframe / Embed</option>
+      <option value="json">JSON de revisão</option>
+    </select>
+    <button class="btn-publish" id="btnPublish" disabled>Exportar notícias aprovadas →</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// State
+let ITEMS = [];       // propostas de notícia carregadas da API
+let batchId = null;
+let runId   = null;
+const reviewState = {};   // id → { status, editedTitle, editedLead, editedBody, note }
+let currentFilter = 'all';
+
+// Init
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
+  runId = params.get('run_id');
+
+  // sem run_id: mostrar lista de execuções
+  if (!runId) {
+    await showRunPicker();
+    return;
+  }
+
+  loadReview(runId);
+})();
+
+async function showRunPicker() {
+  const box = document.getElementById('stateBox');
+  box.innerHTML = `
+    <div class="state-box">
+      <span class="state-icon">📋</span>
+      <div class="state-title">Selecionar Run</div>
+      <div class="state-msg" style="margin-bottom:1.2rem">Nenhum run_id na URL.<br>Escolhe um run para rever:</div>
+      <div id="runPickerList" style="text-align:left;max-width:420px;margin:0 auto"></div>
+    </div>`;
+
+  try {
+    const res  = await fetch('/api/runs/summary');
+    const data = await res.json();
+    const runs = (data.runs || []).filter(r => (r.generation?.total_generated || 0) > 0);
+
+    if (!runs.length) {
+      document.getElementById('runPickerList').innerHTML =
+        `<p style="font-family:var(--mono);font-size:.65rem;color:var(--text3);text-align:center">
+          Nenhuma execução com propostas de notícia geradas.<br>Execute primeiro o fluxo completo.
+         </p>`;
+      return;
+    }
+
+    document.getElementById('runPickerList').innerHTML = runs.map(r => `
+      <a href="?run_id=${r.run_id}" style="
+        display:block;padding:.7rem 1rem;margin-bottom:.5rem;
+        background:var(--surface);border:1px solid var(--border);border-radius:1px;
+        text-decoration:none;transition:border-color .15s;
+      " onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-family:var(--mono);font-size:.6rem;color:var(--text3);margin-bottom:.3rem">
+          ${r.timestamp?.slice(0,16) || '—'} &nbsp;·&nbsp;
+          <span style="color:var(--gold)">${r.strategy || '—'}</span>
+        </div>
+        <div style="font-family:var(--serif);font-size:.9rem;font-weight:600;color:var(--text)">
+          ${r.model || '—'}
+        </div>
+        <div style="font-family:var(--mono);font-size:.58rem;color:var(--text3);margin-top:.2rem">
+          ${r.generation?.total_generated || 0} propostas de notícia geradas &nbsp;·&nbsp; ${r.filename || ''}
+        </div>
+      </a>
+    `).join('');
+  } catch(e) {
+    document.getElementById('runPickerList').innerHTML =
+      `<p style="font-family:var(--mono);font-size:.65rem;color:#f87060">Erro ao carregar runs: ${e.message}</p>`;
+  }
+}
+
+
+
+const REVIEW_STATUS_FROM_API = {
+  pendente: 'pending',
+  aprovado: 'approved',
+  aprovado_com_edicao: 'edited',
+  rejeitado: 'rejected',
+  pending: 'pending',
+  approved: 'approved',
+  edited: 'edited',
+  rejected: 'rejected'
+};
+
+function normalizeReviewItem(it) {
+  const generated = it.generated || {};
+  const corrected = it.corrected || {};
+  const id = String(it.item_id ?? it.id ?? it.segment_id);
+  return {
+    ...it,
+    id,
+    item_id: it.item_id ?? it.id,
+    subject: it.subject || it.subject_text || it.item_title || it.segment_id,
+    date: it.date || '',
+    generated_news: it.generated_news || {
+      antetitulo: generated.antetitulo || '',
+      titulo: generated.titulo || generated.title || '',
+      superlead: generated.superlead || '',
+      lead: generated.lead || '',
+      corpo: generated.corpo || generated.body || '',
+      citacoes: generated.citations || [],
+    },
+    manual_antetitle: it.manual_antetitle || corrected.antetitulo || '',
+    manual_title: it.manual_title || corrected.titulo || corrected.title || '',
+    manual_superlead: it.manual_superlead || corrected.superlead || '',
+    manual_lead: it.manual_lead || corrected.lead || '',
+    manual_body: it.manual_body || corrected.corpo || corrected.body || '',
+    iip_scores: it.iip_scores || {},
+  };
+}
+
+async function loadReview(rid) {
+  setLoading('A iniciar sessão de revisão…');
+  batchId = `review_${rid}`;
+
+  try {
+    // cria o lote de revisão
+    const res  = await fetch('/api/review/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run_id: rid, batch_id: batchId }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    setLoading('A carregar itens…');
+
+    // carrega os itens
+    const bRes  = await fetch(`/api/review/${batchId}`);
+    const bData = await bRes.json();
+    if (bData.error) throw new Error(bData.error);
+
+    // só itens com proposta gerada
+    ITEMS = (bData.items || []).map(normalizeReviewItem).filter(it =>
+      it.generated_news?.titulo || it.generated_news?.lead || it.generated_news?.corpo
+    ).sort((a,b) => (Number(a.priority_rank || 999999) - Number(b.priority_rank || 999999)) || (Number(b.iip_direct || b.iip_total || 0) - Number(a.iip_direct || a.iip_total || 0)));
+
+    if (!ITEMS.length) {
+      showError('Nenhuma proposta de notícia gerada nesta execução.', 'Execute o fluxo com geração ativada.');
+      return;
+    }
+
+    
+    ITEMS.forEach(it => {
+      const n = it.generated_news || {};
+      reviewState[it.id] = {
+        status:       REVIEW_STATUS_FROM_API[it.review_status] || 'pending',
+        editedAntetitle: it.manual_antetitle || n.antetitulo || '',
+        editedTitle:  it.manual_title  || n.titulo || '',
+        editedSuperlead: it.manual_superlead || n.superlead || '',
+        editedLead:   it.manual_lead   || n.lead   || '',
+        editedBody:   it.manual_body   || n.corpo  || '',
+        note:         it.reviewer_comment || '',
+        isEditing:    false,
+        sourceOpen:   false,
+      };
+    });
+
+    
+    const summary = data.summary || {};
+    document.getElementById('runInfo').textContent =
+      `Run: ${rid.slice(-12)} · ${ITEMS.length} propostas de notícia`;
+    document.getElementById('stateBox').style.display   = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('publishBar').style.display  = 'block';
+    document.getElementById('filterStrip').style.display = 'flex';
+    document.getElementById('progressRow').style.display = 'flex';
+
+    renderAll();
+    updateStats();
+
+  } catch(e) {
+    showError('Erro ao carregar revisão', e.message);
+  }
+}
+
+// Render
+function renderAll() {
+  const list = document.getElementById('cardList');
+  const empty = document.getElementById('emptyState');
+  list.innerHTML = '';
+
+  const filtered = ITEMS.filter(it => {
+    const s = reviewState[it.id]?.status || 'pending';
+    return currentFilter === 'all' || s === currentFilter;
+  });
+
+  document.getElementById('filterCount').textContent = `${filtered.length} itens`;
+
+  if (!filtered.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  filtered.forEach((it, i) => {
+    const card = buildCard(it, i);
+    list.appendChild(card);
+  });
+}
+
+function buildCard(it, idx) {
+  const s   = reviewState[it.id];
+  const n   = it.generated_news || {};
+  const cr  = it.iip_scores || {};
+  const iipLevel = it.iip_level === 'alto' ? 'high' : it.iip_level === 'medio' ? 'mid' : 'low';
+  const criKeys   = ['relevancia','proximidade','novidade','atualidade','continuidade','notoriedade','negatividade'];
+  const criLabels = {relevancia:'Relevância',proximidade:'Proximidade',novidade:'Novidade',atualidade:'Atualidade',continuidade:'Continuidade',notoriedade:'Notoriedade',negatividade:'Negatividade'};
+  const criHints = {relevancia:'impacto público',proximidade:'ligação local',novidade:'caráter novo',atualidade:'oportunidade temporal',continuidade:'seguimento',notoriedade:'atores reconhecidos',negatividade:'conflito ou dano'};
+
+  const criteriaHtml = criKeys.map(k => {
+    const v = cr[k] ?? '—';
+    return `<div class="crit-cell" title="${criLabels[k]}: ${criHints[k]}">
+      <span class="crit-lbl">${criLabels[k]}<small>${criHints[k]}</small></span>
+      <span class="crit-val cv${v}">${v}</span>
+    </div>`;
+  }).join('');
+
+  const statusBadge = {
+    pending:  '<span class="card-status-badge badge-pending">Por rever</span>',
+    approved: '<span class="card-status-badge badge-approved">✓ Aprovado</span>',
+    edited:   '<span class="card-status-badge badge-edited">✎ Editado</span>',
+    rejected: '<span class="card-status-badge badge-rejected">✕ Rejeitado</span>',
+  }[s.status] || '';
+
+  const titulo = s.editedTitle || n.titulo || '(sem título)';
+  const antetitulo = s.editedAntetitle || n.antetitulo || '';
+  const superlead = s.editedSuperlead || n.superlead || '';
+  const lead   = s.editedLead  || n.lead   || '';
+  const corpo  = s.editedBody  || n.corpo  || '';
+  const generation = generationPresentation(it);
+
+  const div = document.createElement('div');
+  div.className = `review-card ${s.status}`;
+  div.id = `card_${it.id}`;
+  div.innerHTML = `
+    <div class="card-header">
+      <span class="card-num">Prioridade #${it.priority_rank ?? idx + 1}</span>
+      ${statusBadge}
+      <span class="card-title">${esc(it.subject || 'Assunto municipal')}</span>
+      <span class="card-iip iip-${iipLevel}">Interesse ${Number(it.iip_direct ?? it.iip_total ?? 0).toFixed(3)}</span>
+    </div>
+    <div class="card-body">
+      <div style="font-family:var(--serif);font-size:.72rem;color:var(--text3);margin-bottom:.6rem">
+        ${esc(it.municipality)}${it.date ? ` &nbsp;·&nbsp; ${esc(it.date)}` : ''}
+      </div>
+      <div class="editorial-overview">
+        <div class="overview-box"><div class="overview-label">Potencial noticioso</div><div class="overview-value">${Number(it.binary_probability || 0) >= .75 ? 'Elevado' : Number(it.binary_probability || 0) >= .55 ? 'Moderado' : 'Reduzido'} · ${it.binary_probability == null ? '—' : (Number(it.binary_probability)*100).toFixed(1)+'%'}</div><div class="overview-meter"><div class="overview-fill" style="width:${Math.max(0,Math.min(100,Number(it.binary_probability||0)*100))}%"></div></div></div>
+        <div class="overview-box"><div class="overview-label">Interesse público</div><div class="overview-value">${Number(it.iip_direct ?? it.iip_total ?? 0).toFixed(3)}</div></div>
+        <div class="overview-box"><div class="overview-label">Prioridade</div><div class="overview-value">#${it.priority_rank ?? idx + 1}</div></div>
+      </div>
+      <div class="criteria-title">Sinais de noticiabilidade</div>
+      <div class="criteria-row">${criteriaHtml}</div>
+
+      <div class="news-display" id="display_${it.id}">
+        <div class="news-heading"><div class="news-label">📰 Proposta de notícia</div><span class="generation-badge ${generation.fallback?'fallback':''}">Gerada por: ${esc(generation.name)}${generation.fallback?' · alternativa operacional':''}</span></div>
+        ${antetitulo ? `<div style="font-family:var(--mono);font-size:.65rem;text-transform:uppercase;color:var(--gold);margin-bottom:.25rem">${esc(antetitulo)}</div>` : ''}
+        <div class="news-titulo">${esc(titulo)}</div>
+        ${superlead ? `<div style="font-family:var(--serif);font-size:.9rem;color:var(--text2);margin:.25rem 0">${esc(superlead)}</div>` : ''}
+        <div class="news-lead">${esc(lead)}</div>
+        ${corpo ? `<div class="news-corpo">${esc(corpo)}</div>` : ''}
+      </div>
+
+      <!-- Edit form -->
+      <div class="edit-form ${s.isEditing ? 'open' : ''}" id="edit_${it.id}">
+        <div class="edit-field">
+          <label class="edit-label">Antetítulo</label>
+          <input class="edit-input" value="${esc(antetitulo)}" oninput="updateEdit('${it.id}','antetitle',this.value)">
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Título</label>
+          <input class="edit-input" id="etitle_${it.id}" value="${esc(titulo)}"
+            oninput="updateEdit('${it.id}','title',this.value)">
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Superlead</label>
+          <textarea class="edit-textarea" rows="2" oninput="updateEdit('${it.id}','superlead',this.value)">${esc(superlead)}</textarea>
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Lead</label>
+          <textarea class="edit-textarea" id="elead_${it.id}" rows="3"
+            oninput="updateEdit('${it.id}','lead',this.value)">${esc(lead)}</textarea>
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Corpo</label>
+          <textarea class="edit-textarea" id="ebody_${it.id}" rows="4"
+            oninput="updateEdit('${it.id}','body',this.value)">${esc(corpo)}</textarea>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-approve ${s.status==='approved'?'active':''}"
+          onclick="setStatus('${it.id}','approved')">✓ Aprovar</button>
+        <button class="btn btn-edit ${s.isEditing||s.status==='edited'?'active':''}"
+          onclick="toggleEdit('${it.id}')">✎ Editar</button>
+        <button class="btn btn-reject ${s.status==='rejected'?'active':''}"
+          onclick="setStatus('${it.id}','rejected')">✕ Rejeitar</button>
+        ${s.status !== 'pending' ? `<button class="btn btn-undo" onclick="setStatus('${it.id}','pending')">↩ Desfazer</button>` : ''}
+        <button class="source-toggle" onclick="toggleSource('${it.id}')">Ver fonte</button>
+      </div>
+
+      <div class="source-text ${s.sourceOpen ? 'open' : ''}" id="src_${it.id}">
+        ${esc(it.full_text || it.subject || '(texto fonte não disponível)')}
+        <details class="technical-review"><summary>Detalhes técnicos e rastreabilidade</summary><div>
+          ID do segmento: ${esc(it.segment_id)}<br>
+          Classificação: ${esc(it.classification_model_version || '—')} · Geração: ${esc(it.generation_model_version || '—')}<br>
+          Probabilidade: ${it.binary_probability ?? '—'} · Limiar: ${it.binary_threshold ?? '—'} · IIP direto: ${it.iip_direct ?? '—'} · IIP derivado: ${it.iip_derived ?? '—'} · Posição: ${it.priority_rank ?? '—'}
+        </div></details>
+      </div>
+
+      <input class="note-input" id="note_${it.id}" placeholder="Nota do editor (opcional)…"
+        value="${esc(s.note)}" oninput="updateNote('${it.id}',this.value)"
+        style="margin-top:.6rem">
+    </div>`;
+  return div;
+}
+
+function generationPresentation(it) {
+  const version = String(it.generation_model_version || '').trim();
+  const strategy = String(it.generation_strategy || '').toLowerCase();
+  const provenance = it.provenance || {};
+  const role = String(provenance.generation_role || provenance.role || '').toLowerCase();
+  const selected = role === 'selected_model' || strategy.includes('selected') || version === 'llama31_8b_4096_lora' || version.toLowerCase().includes('llama31_8b_4096_lora');
+  if (selected) return {name:'Llama 3.1 8B + LoRA', fallback:false};
+  const labels = {'gemini-2.5-pro':'Gemini 2.5 Pro','meta-llama/Llama-3.3-70B-Instruct-Turbo':'Llama 3.3 70B — Together','llama-3.3-70b-versatile':'Llama 3.3 70B — Groq','iaedu':'IA Edu'};
+  return {name:labels[version] || version || 'Gerador não identificado', fallback:true};
+}
+
+// Actions
+function setStatus(id, status) {
+  const s = reviewState[id];
+  s.status = status;
+  if (status !== 'edited') s.isEditing = false;
+  refreshCard(id);
+  updateStats();
+  syncToApi(id).catch(()=>{});
+  toast(status === 'approved' ? '✓ Aprovado' : status === 'rejected' ? '✕ Rejeitado' : '↩ Revertido');
+}
+
+function toggleEdit(id) {
+  const s = reviewState[id];
+  s.isEditing = !s.isEditing;
+  if (!s.isEditing && (
+    s.editedAntetitle !== (ITEMS.find(i=>i.id===id)?.generated_news?.antetitulo || '') ||
+    s.editedTitle !== (ITEMS.find(i=>i.id===id)?.generated_news?.titulo || '') ||
+    s.editedSuperlead !== (ITEMS.find(i=>i.id===id)?.generated_news?.superlead || '') ||
+    s.editedLead  !== (ITEMS.find(i=>i.id===id)?.generated_news?.lead   || '') ||
+    s.editedBody  !== (ITEMS.find(i=>i.id===id)?.generated_news?.corpo  || '')
+  )) {
+    s.status = 'edited';
+  }
+  refreshCard(id);
+  updateStats();
+  if (!s.isEditing) syncToApi(id);
+}
+
+function updateEdit(id, field, val) {
+  const s = reviewState[id];
+  if (field === 'antetitle') s.editedAntetitle = val;
+  if (field === 'title') s.editedTitle = val;
+  if (field === 'superlead') s.editedSuperlead = val;
+  if (field === 'lead')  s.editedLead  = val;
+  if (field === 'body')  s.editedBody  = val;
+  
+  const display = document.getElementById(`display_${id}`);
+  if (display) {
+    display.querySelector('.news-titulo').textContent = s.editedTitle;
+    display.querySelector('.news-lead').textContent   = s.editedLead;
+    const bodyEl = display.querySelector('.news-corpo');
+    if (bodyEl) bodyEl.textContent = s.editedBody;
+  }
+}
+
+function updateNote(id, val) { reviewState[id].note = val; }
+
+function toggleSource(id) {
+  reviewState[id].sourceOpen = !reviewState[id].sourceOpen;
+  const el = document.getElementById(`src_${id}`);
+  if (el) el.classList.toggle('open', reviewState[id].sourceOpen);
+}
+
+function refreshCard(id) {
+  const idx = ITEMS.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const oldCard = document.getElementById(`card_${id}`);
+  if (!oldCard) return;
+  const newCard = buildCard(ITEMS[idx], idx);
+  oldCard.replaceWith(newCard);
+}
+
+// Sync com API
+async function syncToApi(id) {
+  const s = reviewState[id];
+  const statusMap = { pending:'pendente', approved:'aprovado', edited:'aprovado_com_edicao', rejected:'rejeitado' };
+  try {
+    const it = ITEMS.find(i => i.id === id);
+    const numId = it?.item_id ?? it?.id;
+    const res = await fetch(`/api/review/item/${numId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        review_status:    statusMap[s.status] || s.status,
+        reviewer_comment: s.note,
+        manual_antetitle: s.editedAntetitle,
+        manual_title:     s.editedTitle,
+        manual_superlead: s.editedSuperlead,
+        manual_lead:      s.editedLead,
+        manual_body:      s.editedBody,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  } catch(e) {
+    toast(`Erro ao guardar revisão: ${e.message}`);
+    throw e;
+  }
+}
+
+// Stats & progress
+function updateStats() {
+  const counts = { pending:0, approved:0, edited:0, rejected:0 };
+  ITEMS.forEach(it => counts[reviewState[it.id]?.status || 'pending']++);
+
+  document.getElementById('psApproved').textContent = counts.approved;
+  document.getElementById('psEdited').textContent   = counts.edited;
+  document.getElementById('psPending').textContent  = counts.pending;
+  document.getElementById('psRejected').textContent = counts.rejected;
+
+  const done = counts.approved + counts.edited + counts.rejected;
+  const pct  = ITEMS.length ? Math.round(done / ITEMS.length * 100) : 0;
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progTxt').textContent  = `${done} / ${ITEMS.length} revistos`;
+
+  const canPublish = (counts.approved + counts.edited) > 0;
+  document.getElementById('btnPublish').disabled = !canPublish;
+}
+
+// Filter
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.f;
+    renderAll();
+  });
+});
+
+// Export JSON
+document.getElementById('btnExport').addEventListener('click', () => {
+  const out = ITEMS.map(it => {
+    const s = reviewState[it.id];
+    const n = it.generated_news || {};
+    return {
+      segment_id:   it.segment_id || it.id,
+      municipality: it.municipality,
+      date:         it.date,
+      subject:      it.subject,
+      iip_total:    it.iip_total,
+      review_status: s.status,
+      reviewer_note: s.note,
+      titulo: s.status === 'rejected' ? null : (s.editedTitle || n.titulo),
+      antetitulo: s.status === 'rejected' ? null : (s.editedAntetitle || n.antetitulo),
+      superlead: s.status === 'rejected' ? null : (s.editedSuperlead || n.superlead),
+      lead:   s.status === 'rejected' ? null : (s.editedLead  || n.lead),
+      corpo:  s.status === 'rejected' ? null : (s.editedBody  || n.corpo),
+      is_edited: s.status === 'edited',
+    };
+  });
+
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `review_${runId}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Revisão exportada em JSON!');
+});
+
+// Exportar notícias aprovadas
+document.getElementById('btnPublish').addEventListener('click', async () => {
+  const approved = ITEMS.filter(it => {
+    const s = reviewState[it.id];
+    return s.status === 'approved' || s.status === 'edited';
+  });
+
+  if (!approved.length) { toast('Nenhuma proposta de notícia aprovada.'); return; }
+
+  // sincroniza antes de exportar
+  toast('A sincronizar com o servidor…');
+  const syncResults = await Promise.allSettled(ITEMS.map(it => syncToApi(it.id)));
+  const failed = syncResults.filter(r => r.status === 'rejected');
+  if (failed.length) {
+    toast(`Atenção: ${failed.length} item(ns) não foram sincronizados.`);
+    console.warn('Falhas ao sincronizar revisão:', failed);
+  }
+
+  // exporta aprovadas e editadas; rejeitadas ficam de fora
+  const fmt = document.getElementById('exportFormat').value || 'html';
+  const link = document.createElement('a');
+  link.href = `/api/review/${batchId}/publish?format=${encodeURIComponent(fmt)}`;
+  link.download = `newsletter_${runId}_${fmt}.${fmt === 'json' ? 'json' : 'html'}`;
+  link.click();
+  const exportLabel=approved.length===1?'1 notícia aprovada':`${approved.length} notícias aprovadas`; toast(`📰 Exportado em formato ${fmt} com ${exportLabel}.`);
+});
+
+// Helpers
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function setLoading(msg) {
+  document.getElementById('loadingMsg').textContent = msg;
+}
+
+function showError(title, msg) {
+  document.getElementById('stateBox').innerHTML = `
+    <div class="state-box">
+      <span class="state-icon">⚠</span>
+      <div class="state-title">${esc(title)}</div>
+      <div class="state-msg">${esc(msg)}</div>
+      <a href="/" style="display:inline-block;margin-top:1.2rem;
+        font-family:var(--mono);font-size:.65rem;color:var(--gold);
+        text-decoration:none;border:1px solid rgba(201,168,76,.3);
+        padding:.4rem .9rem;border-radius:1px">
+        ← Voltar ao fluxo
+      </a>
+    </div>`;
+}
+</script>
+</body>
+</html>

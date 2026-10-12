@@ -1,0 +1,22 @@
+{
+  "classification": {
+    "enabled": true,
+    "bundle_path": "models\\selected\\classification\\bundle",
+    "device": null,
+    "batch_size": 8
+  },
+  "generation": {
+    "enabled": true,
+    "backend": "remote",
+    "remote_url": "http://127.0.0.1:8000",
+    "remote_timeout_seconds": 600,
+    "model_key": "llama31_8b_4096_lora",
+    "model_version": "llama31_8b_4096_lora",
+    "base_model_id": "meta-llama/Llama-3.1-8B-Instruct",
+    "max_seq_length": 4096,
+    "max_new_tokens": 450,
+    "temperature": 0.0,
+    "operational_fallback_enabled": true,
+    "operational_fallback_default": "gemini-2.5-pro"
+  }
+}

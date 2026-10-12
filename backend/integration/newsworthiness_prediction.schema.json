@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genlocalnews.local/contracts/newsworthiness_prediction.schema.json",
+  "title": "GenLocalNews newsworthiness prediction",
+  "type": "object",
+  "required": [
+    "segment_id", "minute_id", "newsworthy", "binary_probability", "binary_threshold",
+    "news_values", "iip_direct", "iip_derived", "priority_rank", "model_version"
+  ],
+  "properties": {
+    "segment_id": {"type": "string", "minLength": 1},
+    "minute_id": {"type": "string", "minLength": 1},
+    "newsworthy": {"type": "boolean"},
+    "binary_probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "binary_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "news_values": {
+      "type": "object",
+      "required": ["relevancia", "proximidade", "novidade", "atualidade", "continuidade", "notoriedade", "negatividade"],
+      "additionalProperties": false,
+      "properties": {
+        "relevancia": {"type": "integer", "minimum": 1, "maximum": 5},
+        "proximidade": {"type": "integer", "minimum": 1, "maximum": 5},
+        "novidade": {"type": "integer", "minimum": 1, "maximum": 5},
+        "atualidade": {"type": "integer", "minimum": 1, "maximum": 5},
+        "continuidade": {"type": "integer", "minimum": 1, "maximum": 5},
+        "notoriedade": {"type": "integer", "minimum": 1, "maximum": 5},
+        "negatividade": {"type": "integer", "minimum": 1, "maximum": 5}
+      }
+    },
+    "iip_direct": {"type": "number", "minimum": 0, "maximum": 1},
+    "iip_derived": {"type": "number", "minimum": 0, "maximum": 1},
+    "priority_rank": {"type": "integer", "minimum": 1},
+    "model_version": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": true
+}
